@@ -125,7 +125,11 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
         else
         {
             //TODO: Implement searching within manually created indexes
-        }
+        }        
+        
+        
+        
+        
         return node;
     }
 

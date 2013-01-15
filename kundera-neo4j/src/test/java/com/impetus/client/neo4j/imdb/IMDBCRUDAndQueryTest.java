@@ -60,8 +60,49 @@ public class IMDBCRUDAndQueryTest
     public void testCRUD()
     {
         insert();
-        //findById();
+        findById();
+        merge();
+        delete();
         
+    }
+    
+    private void merge()
+    {
+        Actor actor1 = em.find(Actor.class, 1);
+        Actor actor2 = em.find(Actor.class, 2);
+        
+        assertActors(actor1, actor2);
+        
+        actor1.setName("Amresh");
+        actor2.setName("Amir");
+        
+        em.merge(actor1);
+        em.merge(actor2);
+        
+        em.clear();
+        
+        Actor actor1AfterMerge = em.find(Actor.class, 1);
+        Actor actor2AfterMerge = em.find(Actor.class, 2);
+        
+        assertUpdatedActors(actor1AfterMerge, actor2AfterMerge);
+        
+    }
+    
+    private void delete()
+    {
+        Actor actor1 = em.find(Actor.class, 1);
+        Actor actor2 = em.find(Actor.class, 2);
+        assertUpdatedActors(actor1, actor2);
+        
+        em.remove(actor1);
+        em.remove(actor2);
+        
+        em.clear(); //clear cache
+        Actor actor1AfterDeletion = em.find(Actor.class, 1);
+        Actor actor2AfterDeletion = em.find(Actor.class, 2);
+        
+        Assert.assertNull(actor1AfterDeletion);
+        Assert.assertNull(actor2AfterDeletion);
     }
     
     private void findById()
@@ -70,6 +111,16 @@ public class IMDBCRUDAndQueryTest
         Actor actor1 = em.find(Actor.class, 1);
         Actor actor2 = em.find(Actor.class, 2);
         
+        assertActors(actor1, actor2);  
+        
+    }
+
+    /**
+     * @param actor1
+     * @param actor2
+     */
+    private void assertActors(Actor actor1, Actor actor2)
+    {
         Assert.assertNotNull(actor1);
         Assert.assertEquals(1, actor1.getId());
         Assert.assertEquals("Tom Cruise", actor1.getName());
@@ -77,6 +128,21 @@ public class IMDBCRUDAndQueryTest
         Assert.assertNotNull(actor2);
         Assert.assertEquals(2, actor2.getId());
         Assert.assertEquals("Emmanuelle Béart", actor2.getName());
+    }
+    
+    /**
+     * @param actor1
+     * @param actor2
+     */
+    private void assertUpdatedActors(Actor actor1, Actor actor2)
+    {
+        Assert.assertNotNull(actor1);
+        Assert.assertEquals(1, actor1.getId());
+        Assert.assertEquals("Amresh", actor1.getName());
+        
+        Assert.assertNotNull(actor2);
+        Assert.assertEquals(2, actor2.getId());
+        Assert.assertEquals("Amir", actor2.getName());
     }
     
     private void insert()
@@ -106,6 +172,7 @@ public class IMDBCRUDAndQueryTest
         
         em.persist(actor1);
         em.persist(actor2); 
+       
     }
 
 }

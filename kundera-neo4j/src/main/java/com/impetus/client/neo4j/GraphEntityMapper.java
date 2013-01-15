@@ -100,7 +100,7 @@ public class GraphEntityMapper
         EntityType entityType = metaModel.entity(m.getEntityClazz());
         
         //Iterate over, entity attributes
-        Set<Attribute> attributes = entityType.getAttributes();      
+        Set<Attribute> attributes = entityType.getSingularAttributes();     
         
         Object entity = null;   
         
@@ -116,14 +116,10 @@ public class GraphEntityMapper
                 //Set Entity level properties
                 if(! attribute.isCollection() && ! attribute.isAssociation())
                 {
-                    PropertyAccessorHelper.set(entity, field, node.getProperty(columnName));               
+                    PropertyAccessorHelper.set(entity, field, node.getProperty(columnName));         
                     
-                }
-        
-            }
-            
-
-            
+                }        
+            }   
         }
         catch (InstantiationException e)
         {            
