@@ -55,6 +55,7 @@ import com.impetus.kundera.lifecycle.states.TransientState;
 import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.impetus.kundera.metadata.model.PersistenceUnitMetadata;
+import com.impetus.kundera.metadata.model.Relation.ForeignKey;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
 import com.impetus.kundera.persistence.api.Batcher;
 import com.impetus.kundera.persistence.context.CacheBase;
@@ -113,6 +114,7 @@ public class PersistenceDelegator
     private boolean enableFlush;
 
     private Coordinator coordinator;
+
     /**
      * Instantiates a new persistence delegator.
      * 
@@ -165,7 +167,6 @@ public class PersistenceDelegator
             // build flush stack.
 
             flushManager.buildFlushStack(node, com.impetus.kundera.persistence.context.EventLog.EventType.INSERT);
-
 
             flush();
 
@@ -377,83 +378,81 @@ public class PersistenceDelegator
      */
     public void flush()
     {
-        // Get flush stack from Flush Manager
-//        if (applyFlush())
-//        {
-            FlushStack fs = flushManager.getFlushStack();
+        FlushStack fs = flushManager.getFlushStack();
 
-            // Flush each node in flush stack from top to bottom unit it's empty
-            log.debug("Flushing following flush stack to database(s) (showing stack objects from top to bottom):\n"
-                    + fs);
+        // Flush each node in flush stack from top to bottom unit it's empty
+        log.debug("Flushing following flush stack to database(s) (showing stack objects from top to bottom):\n" + fs);
 
-            if (fs != null)
+        if (fs != null)
+        {
+            boolean isBatch = false;
+            while (!fs.isEmpty())
             {
-                boolean isBatch = false;
-                while (!fs.isEmpty())
+                Node node = fs.pop();
+
+                // Only nodes in Managed and Removed state are flushed, rest
+                // are
+                // ignored
+                if (node.isInState(ManagedState.class) || node.isInState(RemovedState.class))
                 {
-                    Node node = fs.pop();
+                    EntityMetadata metadata = getMetadata(node.getDataClass());
+                    node.setClient(getClient(metadata));
 
-                    // Only nodes in Managed and Removed state are flushed, rest
-                    // are
-                    // ignored
-                    if (node.isInState(ManagedState.class) || node.isInState(RemovedState.class))
+                    // if batch size is defined.
+                    if ((node.getClient() instanceof Batcher) && ((Batcher) (node.getClient())).getBatchSize() > 0)
                     {
-                        EntityMetadata metadata = getMetadata(node.getDataClass());
-                        node.setClient(getClient(metadata));
-
-                        // if batch size is defined.
-                        if ((node.getClient() instanceof Batcher) && ((Batcher) (node.getClient())).getBatchSize() > 0)
+                        isBatch = true;
+                        ((Batcher) (node.getClient())).addBatch(node);
+                    }
+                    else if (flushMode.equals(FlushModeType.AUTO) || enableFlush)
+                    {
+                        if (isTransactionInProgress && defaultTransactionSupported(metadata.getPersistenceUnit()))
                         {
-                            isBatch = true;
-                            ((Batcher) (node.getClient())).addBatch(node);
+                            onSynchronization(node, metadata);
                         }
-                        else if (flushMode.equals(FlushModeType.AUTO) || enableFlush)
+                        else
                         {
-                            if(isTransactionInProgress && defaultTransactionSupported(metadata.getPersistenceUnit()))
-                            {
-                                onSynchronization(node, metadata);
-                            } else
-                            {
-                                node.flush();
-                            }
-                        }
-
-                        // Update Link value for all nodes attached to this one
-                        Map<NodeLink, Node> parents = node.getParents();
-                        Map<NodeLink, Node> children = node.getChildren();
-
-                        if (parents != null && !parents.isEmpty())
-                        {
-                            for (NodeLink parentNodeLink : parents.keySet())
-                            {
-                                parentNodeLink.addLinkProperty(LinkProperty.LINK_VALUE, node.getEntityId());
-                            }
-                        }
-
-                        if (children != null && !children.isEmpty())
-                        {
-                            for (NodeLink childNodeLink : children.keySet())
-                            {
-                                childNodeLink.addLinkProperty(LinkProperty.LINK_VALUE, node.getEntityId());
-                            }
+                            node.flush();
                         }
                     }
 
-                }
+                    // Update Link value for all nodes attached to this one
+                    Map<NodeLink, Node> parents = node.getParents();
+                    Map<NodeLink, Node> children = node.getChildren();
 
-                if (!isBatch)
-                {
+                    if (parents != null && !parents.isEmpty())
+                    {
+                        for (NodeLink parentNodeLink : parents.keySet())
+                        {
+                            if (!parentNodeLink.getMultiplicity().equals(ForeignKey.MANY_TO_MANY))
+                                parentNodeLink.addLinkProperty(LinkProperty.LINK_VALUE, node.getEntityId());
+                        }
+                    }
 
-                    // TODO : This needs to be look for different
-                    // permutation/combination
-                    // Flush Join Table data into database
-                    flushJoinTableData();
-                    // performed,
+                    if (children != null && !children.isEmpty())
+                    {
+                        for (NodeLink childNodeLink : children.keySet())
+                        {
+                            if (!childNodeLink.getMultiplicity().equals(ForeignKey.MANY_TO_MANY))
+                                childNodeLink.addLinkProperty(LinkProperty.LINK_VALUE, node.getEntityId());
+                        }
+                    }
                 }
 
             }
 
-//        }
+            if (!isBatch)
+            {
+
+                // TODO : This needs to be look for different
+                // permutation/combination
+                // Flush Join Table data into database
+                flushJoinTableData();
+                // performed,
+            }
+
+        }
+
     }
 
     public <E> E merge(E e)
@@ -896,7 +895,8 @@ public class PersistenceDelegator
     {
         if (applyFlush())
         {
-//            Map<String, JoinTableData> joinTableDataMap = flushManager.getJoinTableData();
+            // Map<String, JoinTableData> joinTableDataMap =
+            // flushManager.getJoinTableData();
             for (JoinTableData jtData : flushManager.getJoinTableData())
             {
                 if (!jtData.isProcessed())
@@ -925,12 +925,12 @@ public class PersistenceDelegator
                         jtData.setProcessed(true);
                     }
                 }
-                
+
             }
         }
     }
 
-/**
+    /**
      * Returns true, if flush mode is AUTO and not running within transaction ||
      * running within transaction and commit is invoked.
      * 
@@ -938,12 +938,13 @@ public class PersistenceDelegator
      */
     private boolean applyFlush()
     {
-//        return true;
+        // return true;
         return (!isTransactionInProgress && flushMode.equals(FlushModeType.AUTO)) || enableFlush;
     }
 
     /**
      * Returns transaction coordinator.
+     * 
      * @return
      */
     Coordinator getCoordinator()
@@ -963,16 +964,17 @@ public class PersistenceDelegator
                     TransactionResource resource = (TransactionResource) Class.forName(txResource).newInstance();
                     coordinator.addResource(resource, pu);
                     Client client = clientMap.get(pu);
-                    
-                    if(! (client instanceof TransactionBinder))
+
+                    if (!(client instanceof TransactionBinder))
                     {
                         throw new KunderaTransactionException(
                                 "Client : "
                                         + client.getClass()
                                         + " must implement TransactionBinder interface, if {kundera.transaction.resource.class} property provided!");
-                    } else
+                    }
+                    else
                     {
-                        ((TransactionBinder)client).bind(resource);
+                        ((TransactionBinder) client).bind(resource);
                     }
                 }
                 else
@@ -1000,32 +1002,34 @@ public class PersistenceDelegator
         return coordinator;
     }
 
-
     /**
      * If transaction is in progress and user explicitly invokes em.flush()!
      * 
-     * @param node data node
-     * @param metadata entity metadata.
+     * @param node
+     *            data node
+     * @param metadata
+     *            entity metadata.
      */
     private void onSynchronization(Node node, EntityMetadata metadata)
     {
-        DefaultTransactionResource resource = (DefaultTransactionResource) coordinator.getResource(metadata.getPersistenceUnit());
-        if(enableFlush)
+        DefaultTransactionResource resource = (DefaultTransactionResource) coordinator.getResource(metadata
+                .getPersistenceUnit());
+        if (enableFlush)
         {
             resource.onFlush();
-        } else
+        }
+        else
         {
-            resource.syncNode(node/*, flushManager.getEvents(node.getNodeId())*/);
+            resource.syncNode(node/* , flushManager.getEvents(node.getNodeId()) */);
         }
     }
-
 
     public boolean defaultTransactionSupported(final String persistenceUnit)
     {
         PersistenceUnitMetadata puMetadata = KunderaMetadataManager.getPersistenceUnitMetadata(persistenceUnit);
 
         String txResource = puMetadata.getProperty(PersistenceProperties.KUNDERA_TRANSACTION_RESOURCE);
-        
+
         return txResource == null;
     }
 }

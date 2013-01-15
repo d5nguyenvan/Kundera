@@ -147,7 +147,7 @@ public class FlushManager
                 // mainCache.getNodeFromCache(nodeLink.getTargetNodeId());
                 Node childNode = children.get(nodeLink);
 
-                if (!childNode.isTraversed())
+                if (childNode != null && !childNode.isTraversed())
                 {
                     addNodesToFlushStack(childNode, eventType);
                 }
@@ -157,8 +157,15 @@ public class FlushManager
             // Process Many-To-Many children
             for (NodeLink nodeLink : manyToManyChildren.keySet())
             {
-                // Node childNode =
-                // mainCache.getNodeFromCache(nodeLink.getTargetNodeId());
+                
+                if (!node.isTraversed())
+                {
+                    // Push this node to stack
+                    node.setTraversed(true);
+                    flushStack.push(node);
+                    logEvent(node, eventType);                
+                }               
+                
                 Node childNode = children.get(nodeLink);
 
                 if (childNode != null)
