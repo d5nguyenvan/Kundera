@@ -151,22 +151,11 @@ public class AbstractEntityReader
                      */
                     if (relation.getType().equals(ForeignKey.MANY_TO_MANY))
                     {
-                        
-
                         // First, Save this entity to persistence cache
-                        PersistenceCacheManager.addEntityToPersistenceCache(entity, pd, entityId);
-                        
-                        //For M-M relationship of Collection type, relationship entities are always fetched from Join Table.
-                        
-                        
-                        if(relation.getPropertyType().isAssignableFrom(Collection.class) || relation.getPropertyType().isAssignableFrom(Set.class))
-                        {
-                            associationBuilder.populateRelationFromJoinTable(entity, m, pd, relation);
-                        }
-                        else if(relation.getPropertyType().isAssignableFrom(Map.class))
-                        {
-                            //TODO: Implement fetching of Map relationship type
-                        }                        
+                        PersistenceCacheManager.addEntityToPersistenceCache(entity, pd, entityId);   
+                            
+                        associationBuilder.populateRelationForM2M(entity, m, pd, relation);
+                                             
                     }
                     else
                     {

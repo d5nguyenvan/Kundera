@@ -39,7 +39,7 @@ import com.impetus.kundera.index.IndexCollection;
 public class Movie
 {
     @Id
-    @Column(name="MOVIE_NAME")
+    @Column(name="MOVIE_ID")
     private String id;
     
     @Column(name="TITLE")

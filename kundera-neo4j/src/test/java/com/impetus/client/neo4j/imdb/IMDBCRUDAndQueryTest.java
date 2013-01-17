@@ -26,6 +26,7 @@ import org.junit.Test;
 
 /**
  * Test case using IMDB example for CRUD and query 
+ * Demonstrates M-2-M Association between two entitites using Map
  * @author amresh.singh
  */
 public class IMDBCRUDAndQueryTest

@@ -224,6 +224,7 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
     @Override
     public List<Object> findByRelation(String colName, Object colValue, Class entityClazz)
     {
+        System.out.println(colName);
         return null;
     }
 
