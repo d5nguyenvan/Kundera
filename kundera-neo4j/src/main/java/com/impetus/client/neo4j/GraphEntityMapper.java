@@ -43,6 +43,7 @@ import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.impetus.kundera.metadata.model.KunderaMetadata;
 import com.impetus.kundera.metadata.model.MetamodelImpl;
 import com.impetus.kundera.metadata.model.PersistenceUnitMetadata;
+import com.impetus.kundera.metadata.model.Relation;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
 import com.impetus.kundera.persistence.EntityReaderException;
 import com.impetus.kundera.property.PropertyAccessorHelper;
@@ -93,7 +94,7 @@ public class GraphEntityMapper
         return node;
     }
 
-    public Object toEntity(Node node, List<String> relationNames, EntityMetadata m)
+    public Object toEntity(Node node, EntityMetadata m)
     {
         MetamodelImpl metaModel = (MetamodelImpl) KunderaMetadata.INSTANCE.getApplicationMetadata().getMetamodel(
                 m.getPersistenceUnit());
@@ -117,6 +118,53 @@ public class GraphEntityMapper
                 if(! attribute.isCollection() && ! attribute.isAssociation())
                 {
                     PropertyAccessorHelper.set(entity, field, node.getProperty(columnName));         
+                    
+                }        
+            }   
+        }
+        catch (InstantiationException e)
+        {            
+            log.error("Error while converting Neo4j object to entity. Details:" + e.getMessage());
+            throw new EntityReaderException("Error while converting Neo4j object to entity");
+        }
+        catch (IllegalAccessException e)
+        {
+            log.error("Error while converting Neo4j object to entity. Details:" + e.getMessage());
+            throw new EntityReaderException("Error while converting Neo4j object to entity");
+        }  
+        
+        
+        return entity;
+    }
+    
+    public Object toEntity(Relationship relationship, EntityMetadata topLevelEntityMetadata, Relation relation)
+    {
+        EntityMetadata relationshipEntityMetadata = KunderaMetadataManager.getEntityMetadata(relation.getMapKeyJoinClass());
+        
+        MetamodelImpl metaModel = (MetamodelImpl) KunderaMetadata.INSTANCE.getApplicationMetadata().getMetamodel(
+                relationshipEntityMetadata.getPersistenceUnit());
+        EntityType entityType = metaModel.entity(relationshipEntityMetadata.getEntityClazz());
+        
+        //Iterate over, entity attributes
+        Set<Attribute> attributes = entityType.getSingularAttributes();     
+        
+        Object entity = null;   
+        
+        try
+        {
+            entity = relationshipEntityMetadata.getEntityClazz().newInstance();
+            
+            for(Attribute attribute : attributes)
+            {       
+                Field field = (Field) attribute.getJavaMember();  
+                String columnName = ((AbstractAttribute) attribute).getJPAColumnName();
+                
+                //Set Entity level properties
+                if(! attribute.isCollection() && ! attribute.isAssociation() 
+                        && ! field.getType().equals(topLevelEntityMetadata.getEntityClazz())
+                        && ! field.getType().equals(relation.getTargetEntity()))
+                {
+                    PropertyAccessorHelper.set(entity, field, relationship.getProperty(columnName));  
                     
                 }        
             }   
@@ -177,17 +225,7 @@ public class GraphEntityMapper
         return factory.getOrCreate(idFieldName, id);
     }
     
-    private boolean isEntityForNeo4J(EntityMetadata entityMetadata)
-    {
-        String persistenceUnit = entityMetadata.getPersistenceUnit();
-        PersistenceUnitMetadata puMetadata = KunderaMetadataManager.getPersistenceUnitMetadata(persistenceUnit);
-        String clientFactory = puMetadata.getProperty(PersistenceProperties.KUNDERA_CLIENT_FACTORY);
-        if(clientFactory.indexOf("com.impetus.client.neo4j") > 0)
-        {
-            return true;
-        }
-        return false;
-    }
+    
     
 
 }

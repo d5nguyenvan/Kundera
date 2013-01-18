@@ -113,6 +113,7 @@ public class Role
     public void setMovie(Movie movie)
     {
         this.movie = movie;
-    }  
+    } 
+    
 
 }
