@@ -15,6 +15,8 @@
  */
 package com.impetus.client.neo4j.imdb;
 
+import java.util.Map;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -125,10 +127,17 @@ public class IMDBCRUDAndQueryTest
         Assert.assertNotNull(actor1);
         Assert.assertEquals(1, actor1.getId());
         Assert.assertEquals("Tom Cruise", actor1.getName());
+        Map<Role, Movie> movies1 = actor1.getMovies();
+        Assert.assertFalse(movies1 == null || movies1.isEmpty());
+        Assert.assertEquals(2, movies1.size());
+        
         
         Assert.assertNotNull(actor2);
         Assert.assertEquals(2, actor2.getId());
         Assert.assertEquals("Emmanuelle Béart", actor2.getName());
+        Map<Role, Movie> movies2 = actor2.getMovies();
+        Assert.assertFalse(movies2 == null || movies2.isEmpty());
+        Assert.assertEquals(2, movies2.size());
     }
     
     /**
@@ -140,10 +149,16 @@ public class IMDBCRUDAndQueryTest
         Assert.assertNotNull(actor1);
         Assert.assertEquals(1, actor1.getId());
         Assert.assertEquals("Amresh", actor1.getName());
+        Map<Role, Movie> movies1 = actor1.getMovies();
+        Assert.assertFalse(movies1 == null || movies1.isEmpty());
+        Assert.assertEquals(2, movies1.size());
         
         Assert.assertNotNull(actor2);
         Assert.assertEquals(2, actor2.getId());
         Assert.assertEquals("Amir", actor2.getName());
+        Map<Role, Movie> movies2 = actor2.getMovies();
+        Assert.assertFalse(movies2 == null || movies2.isEmpty());
+        Assert.assertEquals(2, movies2.size());
     }
     
     private void insert()

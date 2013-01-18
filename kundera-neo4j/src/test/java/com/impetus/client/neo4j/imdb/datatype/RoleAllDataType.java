@@ -13,24 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.impetus.client.neo4j.imdb;
+package com.impetus.client.neo4j.imdb.datatype;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import com.impetus.client.neo4j.imdb.Actor;
+import com.impetus.client.neo4j.imdb.Movie;
 import com.impetus.kundera.index.Index;
 import com.impetus.kundera.index.IndexCollection;
 
 /**
- * Role Relationship entity class
+ * Role Entity containing all data types 
  * @author amresh.singh
  */
 @Entity
 @Table
 @IndexCollection(columns={@Index(name = "roleType", type = "KEYS")})
-public class Role
+public class RoleAllDataType
 {
     @Id
     @Column(name="ROLE_NAME")
@@ -43,13 +45,20 @@ public class Role
     
     private Movie movie;
     
-    public Role() {}
-    
-    public Role(String roleName, String roleType)
+    RoleAllDataType()
     {
+        
+    }
+    
+
+    public RoleAllDataType(String roleName, String roleType)
+    {
+        super();
         this.roleName = roleName;
         this.roleType = roleType;
     }
+
+
 
     /**
      * @return the roleName
@@ -113,28 +122,6 @@ public class Role
     public void setMovie(Movie movie)
     {
         this.movie = movie;
-    } 
-    
-    
-    public boolean equals(Object o)
-    {
-        if (!(o instanceof Role))
-        {
-            return false;
-        }
-
-        Role that = (Role) o;
-        
-        return (this.roleName == that.roleName || this.roleName.equals(that.roleName))
-                &&(this.roleType == that.roleType || this.roleType.equals(that.roleType));   
-        
-    }
-
-    public int hashCode()
-    {
-        int h1 = (roleName == null) ? 0 : roleName.hashCode();
-        int h2 = (roleType == null) ? 0 : roleType.hashCode();
-        return h1 + 31 * h2;
     }
     
     
