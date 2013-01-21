@@ -16,33 +16,31 @@
 package com.impetus.client.neo4j;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.persistence.Column;
-import javax.persistence.MapKeyJoinColumn;
 import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.EntityType;
-import javax.persistence.metamodel.MapAttribute;
-import javax.persistence.metamodel.PluralAttribute.CollectionType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.UniqueFactory;
 
 import com.impetus.client.neo4j.index.AutoIndexing;
-import com.impetus.kundera.PersistenceProperties;
 import com.impetus.kundera.db.RelationHolder;
 import com.impetus.kundera.metadata.KunderaMetadataManager;
 import com.impetus.kundera.metadata.model.EntityMetadata;
 import com.impetus.kundera.metadata.model.KunderaMetadata;
 import com.impetus.kundera.metadata.model.MetamodelImpl;
-import com.impetus.kundera.metadata.model.PersistenceUnitMetadata;
 import com.impetus.kundera.metadata.model.Relation;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
 import com.impetus.kundera.persistence.EntityReaderException;
@@ -81,7 +79,11 @@ public class GraphEntityMapper
                 
                 String columnName = ((AbstractAttribute)attribute).getJPAColumnName();
                 Object value = PropertyAccessorHelper.getObject(entity, field);                
-                node.setProperty(columnName, value);                
+                if(value != null)
+                {
+                    node.setProperty(columnName, toNeo4JObject(value));
+                }
+                                
             }           
         }
         
@@ -226,6 +228,25 @@ public class GraphEntityMapper
     }
     
     
+    private Object toNeo4JObject(Object source)
+    {
+        
+        Class<?> sourceClass = source.getClass();
+        if(source instanceof BigDecimal || source instanceof BigInteger)
+        {
+            return source.toString();
+        }
+        else if ((source instanceof Calendar) || (source instanceof GregorianCalendar))
+        {
+            return PropertyAccessorHelper.fromDate(String.class, Date.class, ((Calendar) source).getTime());
+        }
+        if (source instanceof Date)
+        {
+            return PropertyAccessorHelper.fromDate(String.class, sourceClass, source);
+        }       
+
+        return source;
+    } 
     
 
 }
