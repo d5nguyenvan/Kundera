@@ -119,7 +119,8 @@ public class GraphEntityMapper
                 //Set Entity level properties
                 if(! attribute.isCollection() && ! attribute.isAssociation())
                 {
-                    PropertyAccessorHelper.set(entity, field, node.getProperty(columnName));         
+                    
+                    PropertyAccessorHelper.set(entity, field, fromNeo4JObject(node.getProperty(columnName), field));         
                     
                 }        
             }   
@@ -166,7 +167,8 @@ public class GraphEntityMapper
                         && ! field.getType().equals(topLevelEntityMetadata.getEntityClazz())
                         && ! field.getType().equals(relation.getTargetEntity()))
                 {
-                    PropertyAccessorHelper.set(entity, field, relationship.getProperty(columnName));  
+                    Object value = relationship.getProperty(columnName);
+                    PropertyAccessorHelper.set(entity, field, fromNeo4JObject(value, field));  
                     
                 }        
             }   
@@ -228,7 +230,7 @@ public class GraphEntityMapper
     }
     
     
-    private Object toNeo4JObject(Object source)
+    public Object toNeo4JObject(Object source)
     {
         
         Class<?> sourceClass = source.getClass();
@@ -237,16 +239,43 @@ public class GraphEntityMapper
             return source.toString();
         }
         else if ((source instanceof Calendar) || (source instanceof GregorianCalendar))
-        {
-            return PropertyAccessorHelper.fromDate(String.class, Date.class, ((Calendar) source).getTime());
+        {            
+            return PropertyAccessorHelper.fromSourceToTargetClass(String.class, Date.class, ((Calendar) source).getTime());
         }
         if (source instanceof Date)
-        {
-            return PropertyAccessorHelper.fromDate(String.class, sourceClass, source);
+        {            
+            return PropertyAccessorHelper.fromSourceToTargetClass(String.class, sourceClass, source);
         }       
 
         return source;
     } 
+    
+    public Object fromNeo4JObject(Object source, Field field)
+    {    
+        Class<?> targetClass = field.getType();
+        
+        if(targetClass.isAssignableFrom(BigDecimal.class) 
+                || targetClass.isAssignableFrom(BigInteger.class)
+                )
+        {
+            return PropertyAccessorHelper.fromSourceToTargetClass(field.getType(), source.getClass(), source);
+        }
+        else if(targetClass.isAssignableFrom(Calendar.class)
+                || targetClass.isAssignableFrom(GregorianCalendar.class))
+        {
+            Date d = (Date)PropertyAccessorHelper.fromSourceToTargetClass(Date.class, source.getClass(), source);            
+            Calendar cal =  Calendar.getInstance(); cal.setTime(d); return cal;
+        }
+        else if(targetClass.isAssignableFrom(Date.class))
+        {
+            return PropertyAccessorHelper.fromSourceToTargetClass(field.getType(), source.getClass(), source);
+        }
+        else
+        {
+            return source;
+        }
+        
+    }
     
 
 }

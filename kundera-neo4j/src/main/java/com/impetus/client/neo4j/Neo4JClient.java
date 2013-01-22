@@ -16,9 +16,7 @@
 package com.impetus.client.neo4j;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
@@ -127,6 +125,20 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
                         Node endNode = relationship.getEndNode();
                         Object targetEntity = mapper.toEntity(endNode, targetEntityMetadata);
                         Object relationshipEntity = mapper.toEntity(relationship, m, relation);
+                        
+                        //Set references to Target and owning entity in relationship entity
+                        Class<?> relationshipClass = relation.getMapKeyJoinClass();
+                        for(Field f : relationshipClass.getDeclaredFields())
+                        {
+                            if(f.getType().equals(m.getEntityClazz()))
+                            {
+                                PropertyAccessorHelper.set(relationshipEntity, f, entity);
+                            }
+                            else if(f.getType().equals(targetEntityClass))
+                            {
+                                PropertyAccessorHelper.set(relationshipEntity, f, targetEntity);
+                            }
+                        }
                         targetEntitiesMap.put(relationshipEntity, targetEntity);                        
                     }
                     
@@ -281,7 +293,7 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
     @Override
     protected void onPersist(EntityMetadata entityMetadata, Object entity, Object id, List<RelationHolder> rlHolders)
     {
-        log.debug("Persisting " + entity);
+        if(log.isDebugEnabled()) log.debug("Persisting " + entity);
         Transaction tx = null;
 
         GraphDatabaseService graphDb = factory.getConnection();
@@ -322,8 +334,9 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
                                 {
                                     String relPropertyName = f.getAnnotation(Column.class) != null ? f.getAnnotation(
                                             Column.class).name() : f.getName();
-                                    relationship.setProperty(relPropertyName,
-                                            PropertyAccessorHelper.getObject(relationshipObj, f));
+                                    Object value = PropertyAccessorHelper.getObject(relationshipObj, f);
+                                    relationship.setProperty(relPropertyName, mapper.toNeo4JObject(value));
+                                            
                                 }
                             }
                         }
@@ -348,8 +361,7 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
             tx.success();
         }
         catch (Exception e)
-        {
-            e.printStackTrace();
+        {            
             log.error("Error while persisting entity " + entity + ". Details:" + e.getMessage());
         }
         finally

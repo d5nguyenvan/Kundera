@@ -67,14 +67,13 @@ public class IMDBAllDataTypeTest
     {
         insert();
         findById();
-        //merge();
-       // delete();
         
     }
     
     private void findById()
     {
-        //Find actor by ID
+        //Find actor by ID        
+        em.clear();
         ActorAllDataType actor1 = em.find(ActorAllDataType.class, 1);
         ActorAllDataType actor2 = em.find(ActorAllDataType.class, 2);
         
@@ -108,6 +107,13 @@ public class IMDBAllDataTypeTest
         Map<RoleAllDataType, MovieAllDataType> movies1 = actor1.getMovies();
         Assert.assertFalse(movies1 == null || movies1.isEmpty());
         Assert.assertEquals(2, movies1.size());
+        for(RoleAllDataType role : movies1.keySet())
+        {
+            Assert.assertNotNull(role);
+            Assert.assertNotNull(role.getActor());
+            Assert.assertNotNull(role.getMovie());
+            Assert.assertNotNull(movies1.get(role));            
+        }
         
 
         Assert.assertNotNull(actor2);
@@ -134,6 +140,14 @@ public class IMDBAllDataTypeTest
         Map<RoleAllDataType, MovieAllDataType> movies2 = actor2.getMovies();
         Assert.assertFalse(movies2 == null || movies2.isEmpty());
         Assert.assertEquals(2, movies2.size());
+        
+        for(RoleAllDataType role : movies2.keySet())
+        {
+            Assert.assertNotNull(role);
+            Assert.assertNotNull(role.getActor());
+            Assert.assertNotNull(role.getMovie());
+            Assert.assertNotNull(movies2.get(role));            
+        }
     }
     
     private void insert()
@@ -191,7 +205,7 @@ public class IMDBAllDataTypeTest
         movie3.addActor(role4, actor2);
         
         em.persist(actor1);
-        em.persist(actor2); 
+        em.persist(actor2);
         
     }
     
