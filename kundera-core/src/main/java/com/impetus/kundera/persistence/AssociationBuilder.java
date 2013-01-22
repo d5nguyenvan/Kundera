@@ -84,7 +84,7 @@ final class AssociationBuilder
         }
         else if(relation.getPropertyType().isAssignableFrom(Map.class))
         {
-            if(relation.isRelatedViaJoinTable())
+            /*if(relation.isRelatedViaJoinTable())
             {
                 //TODO: Implement Map relationships via Join Table (not supported as of now)
             }
@@ -96,7 +96,7 @@ final class AssociationBuilder
                 List<Object> relationObjects = childClient.findByRelation(relation.getProperty().getName(), id, entityMetadata.getEntityClazz());
                 
                 System.out.println(relationObjects);
-            }
+            }*/
         }       
 
     }

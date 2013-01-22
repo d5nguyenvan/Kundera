@@ -47,6 +47,9 @@ import com.impetus.kundera.metadata.model.Relation.ForeignKey;
 import com.impetus.kundera.metadata.model.attributes.AbstractAttribute;
 import com.impetus.kundera.persistence.EntityReader;
 import com.impetus.kundera.persistence.EntityReaderException;
+import com.impetus.kundera.persistence.KunderaTransactionException;
+import com.impetus.kundera.persistence.TransactionBinder;
+import com.impetus.kundera.persistence.TransactionResource;
 import com.impetus.kundera.persistence.context.jointable.JoinTableData;
 import com.impetus.kundera.property.PropertyAccessorHelper;
 
@@ -56,7 +59,7 @@ import com.impetus.kundera.property.PropertyAccessorHelper;
  * 
  * @author amresh.singh
  */
-public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
+public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, TransactionBinder
 {
 
     private static Log log = LogFactory.getLog(Neo4JClient.class);
@@ -69,6 +72,8 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
     private EntityReader reader;
 
     private GraphEntityMapper mapper;
+    
+    private TransactionResource resource;
 
     Neo4JClient(final Neo4JClientFactory factory)
     {
@@ -380,6 +385,20 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void bind(TransactionResource resource)
+    {
+        if (resource != null && resource instanceof Neo4JTransaction)
+        {
+            this.resource = resource;
+        }
+        else
+        {
+            throw new KunderaTransactionException("Invalid transaction resource provided:" + resource
+                    + " Should have been an instance of :" + Neo4JTransaction.class);
+        }
     }
 
 }
