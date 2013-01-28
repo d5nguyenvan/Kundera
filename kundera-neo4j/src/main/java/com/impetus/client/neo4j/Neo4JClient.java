@@ -29,8 +29,8 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.ReadableIndex;
 
@@ -214,8 +214,7 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
     public void delete(Object entity, Object key)
     {
         GraphDatabaseService graphDb = factory.getConnection();
-
-        Transaction tx = graphDb.beginTx();
+        checkActiveTransaction(); 
 
         try
         {
@@ -224,7 +223,7 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
             Node node = searchNode(key, m, graphDb);
             if (node == null)
             {
-                log.error("Entity to be deleted doesn't exist in graph. Doing nothing");
+                if(log.isDebugEnabled()) log.debug("Entity to be deleted doesn't exist in graph. Doing nothing");
                 return;
             }
 
@@ -236,18 +235,12 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
             for (Relationship relationship : node.getRelationships())
             {
                 relationship.delete();
-            }
-
-            tx.success();
+            }            
         }
         catch (Exception e)
         {
             log.error("Error while removing entity. Details:" + e.getMessage());
-        }
-        finally
-        {
-            tx.finish();
-        }
+        }      
 
     }
 
@@ -299,14 +292,17 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
     protected void onPersist(EntityMetadata entityMetadata, Object entity, Object id, List<RelationHolder> rlHolders)
     {
         if(log.isDebugEnabled()) log.debug("Persisting " + entity);
-        Transaction tx = null;
+        //Transaction tx = null;
 
+        //All Modifying Neo4J operations must be executed within a transaction
+        checkActiveTransaction();     
+        
         GraphDatabaseService graphDb = factory.getConnection();
         AutoIndexing autoIndexing = new AutoIndexing();
 
         try
         {
-            tx = graphDb.beginTx();
+            //tx = graphDb.beginTx();
 
             // Top level node
             Node node = mapper.fromEntity(entity, rlHolders, graphDb, entityMetadata);
@@ -363,17 +359,19 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
 
             }
 
-            tx.success();
+            //tx.success();
         }
         catch (Exception e)
         {            
             log.error("Error while persisting entity " + entity + ". Details:" + e.getMessage());
+            throw new PersistenceException(e);
         }
-        finally
+        /*finally
         {
             tx.finish();
-        }
+        }*/
     }
+    
 
     private boolean isEntityForNeo4J(EntityMetadata entityMetadata)
     {
@@ -392,12 +390,25 @@ public class Neo4JClient extends Neo4JClientBase implements Client<Neo4JQuery>, 
     {
         if (resource != null && resource instanceof Neo4JTransaction)
         {
+            ((Neo4JTransaction)resource).setGraphDb(factory.getConnection());
             this.resource = resource;
         }
         else
         {
             throw new KunderaTransactionException("Invalid transaction resource provided:" + resource
                     + " Should have been an instance of :" + Neo4JTransaction.class);
+        }
+    }
+    
+    /**
+     * Checks whether there is an active transaction within this client
+     * All Modifying Neo4J operations must be executed within a transaction
+     */
+    private void checkActiveTransaction()
+    {
+        if(resource == null || ! resource.isActive())
+        {
+            throw new NotInTransactionException("All Modifying Neo4J operations must be executed within a transaction");
         }
     }
 

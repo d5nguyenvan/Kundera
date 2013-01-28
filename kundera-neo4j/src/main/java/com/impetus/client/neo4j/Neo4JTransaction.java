@@ -15,6 +15,9 @@
  */
 package com.impetus.client.neo4j;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
+
 import com.impetus.kundera.persistence.TransactionResource;
 
 /**
@@ -24,37 +27,77 @@ import com.impetus.kundera.persistence.TransactionResource;
  */
 public class Neo4JTransaction implements TransactionResource
 {
-
+    private boolean isTransactionInProgress;  
+    
+    GraphDatabaseService graphDb = null;
+    Transaction tx = null;
+    
     @Override
     public void onBegin()
     {
+        if(graphDb != null && ! isTransactionInProgress)
+        {
+            tx = graphDb.beginTx();
+        }
+        
+        isTransactionInProgress = true;
     }
 
     @Override
     public void onCommit()
     {
+        if(tx != null && isTransactionInProgress)
+        {
+            tx.success();
+            tx.finish();
+        }
+        
+        isTransactionInProgress = false;
     }
 
     @Override
     public void onRollback()
     {
+        if(tx != null && isTransactionInProgress)
+        {
+            tx.failure();
+        }
+        
+        isTransactionInProgress = false;
     }
 
     @Override
     public void onFlush()
     {
+        onCommit();
     }
 
     @Override
     public Response prepare()
     {
-        return null;
+        return Response.YES;
     }
 
     @Override
     public boolean isActive()
     {
-        return false;
+        return isTransactionInProgress;
     }
+
+    /**
+     * @return the graphDb
+     */
+    public GraphDatabaseService getGraphDb()
+    {
+        return graphDb;
+    }
+
+    /**
+     * @param graphDb the graphDb to set
+     */
+    public void setGraphDb(GraphDatabaseService graphDb)
+    {
+        this.graphDb = graphDb;
+    } 
 
 }

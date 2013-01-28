@@ -63,9 +63,9 @@ public class IMDBCRUDAndQueryTest
     public void testCRUD()
     {
         insert();
-        findById();
-        merge();
-        delete();
+        //findById();
+        //merge();
+        //delete();
         
     }
     
@@ -186,8 +186,12 @@ public class IMDBCRUDAndQueryTest
         movie2.addActor(role2, actor1); movie2.addActor(role3, actor2);
         movie3.addActor(role4, actor2);
         
+        em.getTransaction().begin();
+        
         em.persist(actor1);
         em.persist(actor2); 
+        
+        em.getTransaction().commit();
        
     }
 
